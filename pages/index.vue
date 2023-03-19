@@ -123,8 +123,8 @@ export default {
         }
         // get accounts
         const accounts = await ethereum.request({ method: 'eth_requestAccounts' })
-        const message = 'Sign this message to login'
-        const nonce = 116986840
+        const message = 'Welcome !\n\nClick to sign in and login\n\nThis request will not trigger a blockchain transaction or cost any gas fees.\n\nWallet address:'+accounts[0]
+        const nonce = 116986840436272384689823124477
         await ethereum.request({ method: 'personal_sign', params: [accounts[0], message + '\n\nNonce : ' + nonce] })
           .then((res) => {
             const signature = this.contract.verify(accounts[0], message, nonce, res)
