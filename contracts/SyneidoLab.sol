@@ -27,27 +27,27 @@ contract SyneidoLab is ERC1155, Ownable, ERC1155Supply, VerifySignature {
     }
 
     function freeMint(address _account) external {
-        require(numberSftsPerUser[msg.sender] == 0, "Pass Syneido Lab already bought");
+        require(numberSftsPerUser[_account] == 0, "Pass Syneido Lab already bought");
         require(supply + 1 <= MAX_SUPPLY, "Max supply exceeded");
         supply += 1;
-        numberSftsPerUser[msg.sender] = 1;
+        numberSftsPerUser[_account] = 1;
         _mint(_account, idToken, 1, " ");
     }
 
     function gift(address _account) external onlyOwner {
-        require(numberSftsPerUser[msg.sender] == 0, "Pass Syneido Lab already bought");
+        require(numberSftsPerUser[_account] == 0, "Pass Syneido Lab already bought");
         require(supply + 1 <= MAX_SUPPLY, "Max supply exceeded");
         supply += 1;
-        numberSftsPerUser[msg.sender] = 1;
+        numberSftsPerUser[_account] = 1;
         _mint(_account, idToken, 1, " ");
     }
 
     function publicMint(address _account) external payable {
-        require(numberSftsPerUser[msg.sender] == 0, "Pass Syneido Lab already bought");
+        require(numberSftsPerUser[_account] == 0, "Pass Syneido Lab already bought");
         require(msg.value >= PRICE_PUBLIC, "Not enought funds");
         require(supply + 1 <= MAX_SUPPLY, "Max supply exceeded");
         supply += 1;
-        numberSftsPerUser[msg.sender] = 1;
+        numberSftsPerUser[_account] = 1;
         _mint(_account, idToken, 1, " ");
     }
 

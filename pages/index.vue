@@ -39,6 +39,25 @@
               </div>
             </div>
 
+            <div v-if="successTransaction || errorTransaction" class="row items-center justify-center pt-8 pb-5">
+              <div class="flex justify-center columns-12 columns-md-9 columns-sm-6 align-center">
+
+                <div v-if="successTransaction" class="bg-teal-100 border-t-4 border-teal-500 rounded-b text-teal-900 px-4 py-3 shadow-md" role="alert">
+                  <div class="flex">
+                    <div>
+                      <p class="font-bold">{{ successTransaction }}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-if="errorTransaction" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                  <strong class="font-bold">Error</strong>
+                  <span class="block sm:inline">{{ errorTransaction }}</span>
+                </div>
+              </div>
+
+            </div>
+
             <div class="row items-center justify-center pt-8 pb-5">
               <div id="withdraw-all-eth" class="flex justify-center columns-12 columns-md-9 columns-sm-6 align-center">
                 <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded font-medium" @click="mintNFT">
@@ -56,6 +75,7 @@
 <script>
 import { ethers } from 'ethers'
 import ContractAbi from '../artifacts/contracts/SyneidoLab.sol/SyneidoLab.json'
+import { getParsedEthersError } from "@enzoferey/ethers-error-parser"
 export default {
   name: 'IndexPage',
   components: {
@@ -67,7 +87,9 @@ export default {
       connecting: false,
       contractInitialised: false,
       currentAccount: null,
-      currentWalletAmount: 0
+      currentWalletAmount: 0,
+      errorTransaction: null,
+      successTransaction: null,
     }
   },
   mounted () {
@@ -80,6 +102,7 @@ export default {
           if (e.length > 0) {
             this.currentAccount = e[0]
             this.checkWallet()
+            this.errorTransaction = null
           } else {
             this.handleDisconnect()
           }
@@ -88,7 +111,7 @@ export default {
       const provider = new ethers.providers.Web3Provider(ethereum)
       const signer = provider.getSigner()
       const contract = new ethers.Contract(
-        '0xb76C1510721D8398844a9CF74f689477a3950BdB', // change this when deploy new contract
+        '0x592773c62984992E61AF64e4f747c42D07719ca2', // change this when deploy new contract
         ContractAbi.abi,
         signer
       )
@@ -107,6 +130,8 @@ export default {
       this.currentAccount = null
       this.connecting = false
       this.currentWalletAmount = 0
+      this.errorTransaction = null
+      this.successTransaction = null
     },
     // eslint-disable-next-line require-await
     async disconnectWallet () {
@@ -124,7 +149,7 @@ export default {
         // get accounts
         const accounts = await ethereum.request({ method: 'eth_requestAccounts' })
         const message = 'Welcome !\n\nClick to sign in and login\n\nThis request will not trigger a blockchain transaction or cost any gas fees.\n\nWallet address:'+accounts[0]
-        const nonce = 116986840436272384689823124477
+        const nonce = 1169868404362723
         await ethereum.request({ method: 'personal_sign', params: [accounts[0], message + '\n\nNonce : ' + nonce] })
           .then((res) => {
             const signature = this.contract.verify(accounts[0], message, nonce, res)
@@ -142,7 +167,11 @@ export default {
           )
       } catch (error) {
         this.connecting = false
-        console.log('Error connecting to metamask', error)
+        const parsedEthersError = getParsedEthersError(error);
+        if(parsedEthersError.errorCode === 'REJECTED_TRANSACTION'){
+          return
+        }
+        console.log('Error connecting to metamask :', error.message)
       }
     },
     // eslint-disable-next-line require-await
@@ -160,22 +189,39 @@ export default {
           this.currentWalletAmount = ethers.utils.formatEther(balance)
         })
         this.loading = false
-      } catch (e) {
-        console.log(e)
+      } catch (error) {
+        console.log(error)
         this.loading = false
-        alert('Failed to check wallet')
       }
     },
     async mintNFT () {
-      console.log('test')
+      this.errorTransaction = null
       try {
-        this.loading = true
-        await this.contract.freeMint(this.currentAccount)
-        this.loading = false
-      } catch (e) {
-        console.log(e)
-        this.loading = false
-        alert('Failed to mint NFT')
+        await this.contract.freeMint(this.currentAccount).then((tx) => {
+          this.loading = true
+          console.log(tx)
+          tx.wait()
+            .then((res) => {
+              console.log(res)
+              this.loading = false
+              this.successTransaction = "Transfer Successful!"
+            })
+            .catch((res) => {
+              console.log(res)
+              this.errorTransaction = "Transfer Failed!"
+              this.loading = false
+            })
+        })
+      } catch (error) {
+        const parsedEthersError = getParsedEthersError(error);
+        if(parsedEthersError.errorCode === 'REJECTED_TRANSACTION'){
+          return
+        }else{
+          if (error.error.code === -32603) {
+            this.errorTransaction = error.error.message
+            this.loading = false
+          }
+        }
       }
     }
   }
