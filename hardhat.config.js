@@ -12,4 +12,4 @@ module.exports = {
       accounts: ['0xPRIVATE-KEY']
     }*/
   }
-  };
+};

@@ -16,6 +16,7 @@
           <div class="row flex items-center justify-center pb-10">
             <img src="/logo_syneido_lab.png" alt="Logo Syneido Lab" style="width: 75%;">
           </div>
+          <p>{{ens}}</p>
           <div v-if="!currentAccount" class="row items-center justify-center">
             <div class="flex justify-center columns-12 columns-md-9 columns-sm-6 align-center">
               <button
@@ -87,6 +88,7 @@ export default {
       connecting: false,
       contractInitialised: false,
       currentAccount: null,
+      ens: null,
       currentWalletAmount: 0,
       errorTransaction: null,
       successTransaction: null,
@@ -128,6 +130,7 @@ export default {
     // eslint-disable-next-line require-await
     async handleDisconnect () {
       this.currentAccount = null
+      this.ens = null
       this.connecting = false
       this.currentWalletAmount = 0
       this.errorTransaction = null
@@ -146,6 +149,7 @@ export default {
           console.log('Metamask not detected')
           return
         }
+        const provider = new ethers.providers.Web3Provider(ethereum)
         // get accounts
         const accounts = await ethereum.request({ method: 'eth_requestAccounts' })
         const message = 'Welcome !\n\nClick to sign in and login\n\nThis request will not trigger a blockchain transaction or cost any gas fees.\n\nWallet address:'+accounts[0]
@@ -156,8 +160,11 @@ export default {
             if (signature) {
               this.connecting = true
               this.currentAccount = accounts[0] // set first account to currentAccount
-              // check balance of account
-              this.checkWallet()
+              provider.lookupAddress(accounts[0]) // set ENS if exist
+                .then((res) => {
+                  this.ens = res
+                })
+              this.checkWallet() // check balance of account
             } else {
               this.disconnectWallet()
             }
